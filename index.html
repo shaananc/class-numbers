@@ -183,6 +183,7 @@ footer a { color: var(--accent); }
       <select id="career" title="Career"><option value="">All careers</option></select>
       <select id="subject" title="Subject"><option value="">All subjects</option></select>
       <label class="toggle" id="openTog"><input type="checkbox" id="openOnly">Open seats</label>
+      <label class="toggle" id="subTog" title="Hide independent study, thesis, internship, and similar placeholder listings"><input type="checkbox" id="hideNonsub" checked>Hide ind. study&hairsp;/&hairsp;thesis</label>
       <span id="count"></span>
     </div>
   </div>
@@ -191,7 +192,7 @@ footer a { color: var(--accent); }
   <button id="more" hidden>Show more</button>
 
   <footer>
-    Unofficial. Data refreshed every few hours from Tufts SIS public class search —
+    Unofficial. Enrollment re-scraped from Tufts SIS hourly during the day (browsers block direct cross-site SIS queries) —
     always confirm in <a href="https://sis.it.tufts.edu/psp/paprd/EMPLOYEE/EMPL/h/?tab=TFP_CLASS_SEARCH">SIS</a>.
     <span id="gen"></span>
   </footer>
@@ -206,6 +207,16 @@ const CAREERS = {
   DENT: "Dental", VETS: "Veterinary", NUTR: "Nutrition", FLET: "Fletcher",
   OTPD: "Occupational Therapy", PA: "Physician Asst", PHPD: "Public Health",
 };
+
+const NONSUBST = new RegExp("\\b(" + [
+  "independent stud(y|ies)", "independent research", "independent work",
+  "directed stud(y|ies)", "directed research", "directed reading",
+  "supervised research", "guided stud(y|ies)", "special problems",
+  "thesis", "dissertation", "internship", "practicum", "apprenticeship",
+  "co-?op(erative)? (education|experience|work)", "continuation",
+  "research credit", "teaching assistant", "graduate research",
+  "doctoral research", "field ?work experience", "clinical experience",
+].join("|") + ")\\b", "i");
 
 function esc(s) {
   return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -234,15 +245,41 @@ async function loadTerm(term, idx) {
     }
     c._instr = [...instr];
     c._attrs = [...attrs];
-    c._subject = c.num.split("-")[0];
-    c._hay = (c.num.replace("-", " ") + " " + c.num.replace(/-0*/, " ") + " " + c.num +
-      " " + c.title + " " + c._instr.join(" ") + " " + (c.desc || "")).toLowerCase();
+    const [subj, catnum = ""] = c.num.split("-");
+    const bare = catnum.replace(/^0+/, "") || catnum;
+    c._subject = subj;
+    // compact course-number aliases so "cs151", "cs 151", "CS-0151" all match
+    c._numAlts = [...new Set([subj + catnum, subj + bare])].map(a => a.toLowerCase());
+    c._hay = (`${subj} ${catnum} ${subj} ${bare} ${c._numAlts.join(" ")} ` + c.title +
+      " " + c._instr.join(" ") + " " + (c.desc || "")).toLowerCase();
+    c._sub = !NONSUBST.test(c.title);
   }
-  const gen = new Date(data.generated);
-  $("updated").textContent = `enrollment as of ${gen.toLocaleString([], {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"})}`;
+  showUpdated();
   buildFilters(data);
   render();
 }
+
+function showUpdated() {
+  if (!state.data) return;
+  const mins = Math.max(0, Math.round((Date.now() - new Date(state.data.generated)) / 60000));
+  const ago = mins < 60 ? `${mins} min ago` : `${Math.round(mins / 60)} h ago`;
+  $("updated").textContent = `enrollment updated ${ago}`;
+}
+
+// keep the page live: pick up fresh data as the refresh workflow publishes it
+setInterval(async () => {
+  showUpdated();
+  try {
+    const idx = await (await fetch("data/index.json", { cache: "no-cache" })).json();
+    const cur = idx.find(t => t.term === state.term);
+    if (cur && state.data && cur.generated !== state.data.generated) {
+      const open = new Set([...document.querySelectorAll("details[open] .cnum")].map(e => e.textContent));
+      await loadTerm(state.term);
+      for (const el of document.querySelectorAll(".card"))
+        if (open.has(el.querySelector(".cnum")?.textContent)) el.open = true;
+    }
+  } catch {}
+}, 5 * 60 * 1000);
 
 function buildFilters(data) {
   const subjects = [...new Set(data.courses.map(c => c._subject))].sort();
@@ -253,12 +290,12 @@ function buildFilters(data) {
     careers.map(c => `<option value="${esc(c)}">${esc(CAREERS[c] || c)}</option>`).join("");
 }
 
-function score(c, terms) {
+function score(c, terms, qcompact) {
   let s = 0;
-  const numNorm = c.num.replace("-", " ").toLowerCase();
+  if (qcompact && c._numAlts.some(a => a.startsWith(qcompact))) s += 60;
   for (const t of terms) {
     if (!c._hay.includes(t)) return -1;
-    if (numNorm.startsWith(t) || c.num.toLowerCase().startsWith(t)) s += 30;
+    if (c._numAlts.some(a => a.startsWith(t))) s += 30;
     else if (c.title.toLowerCase().includes(t)) s += 12;
     else if (c._instr.some(i => i.toLowerCase().includes(t))) s += 10;
     else s += 1;
@@ -269,15 +306,18 @@ function score(c, terms) {
 function matches() {
   const q = $("q").value.trim().toLowerCase();
   const subj = $("subject").value, car = $("career").value, open = $("openOnly").checked;
+  const hideNonsub = $("hideNonsub").checked;
   const terms = q.split(/\s+/).filter(Boolean);
+  const qcompact = /^[a-z]{2,6}[\s-]*0*\d/.test(q) ? q.replace(/[\s-]+/g, "").replace(/^([a-z]+)0+/, "$1") : "";
   const out = [];
   for (const c of state.data.courses) {
     if (subj && c._subject !== subj) continue;
     if (car && c.career !== car) continue;
     if (open && !c.sections.some(s => s.status === "O")) continue;
+    if (hideNonsub && !c._sub) continue;
     let sc = 0;
     if (terms.length) {
-      sc = score(c, terms);
+      sc = score(c, terms, qcompact);
       if (sc < 0) continue;
     }
     out.push([sc, c]);
@@ -336,6 +376,7 @@ function render() {
   const q = $("q").value.trim();
   $("count").textContent = `${list.length} course${list.length === 1 ? "" : "s"}`;
   $("openTog").classList.toggle("on", $("openOnly").checked);
+  $("subTog").classList.toggle("on", $("hideNonsub").checked);
   const slice = list.slice(0, state.shown);
   $("results").innerHTML = slice.length
     ? slice.map(c => courseHtml(c, !!q && list.length <= 5)).join("")
@@ -345,7 +386,7 @@ function render() {
 
 let deb;
 $("q").addEventListener("input", () => { clearTimeout(deb); deb = setTimeout(() => { state.shown = 40; render(); }, 120); });
-for (const id of ["subject", "career", "openOnly"])
+for (const id of ["subject", "career", "openOnly", "hideNonsub"])
   $(id).addEventListener("change", () => { state.shown = 40; render(); });
 $("more").addEventListener("click", () => { state.shown += 40; render(); });
 document.addEventListener("keydown", e => {

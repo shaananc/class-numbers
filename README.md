@@ -12,7 +12,9 @@ front-end to the data behind the SIS public class search.
   (`IScript_getSearchresultsAll3`), then fetches per-section enrollment details
   (`IScript_getResultsDetails`) and writes compact JSON to `data/`.
 - A [GitHub Actions workflow](.github/workflows/refresh.yml) reruns the fetch
-  every 6 hours, commits the data, and redeploys GitHub Pages.
+  hourly during the day (every 3 h overnight), commits the data, and redeploys
+  GitHub Pages. The page itself polls for fresh data every 5 minutes, so an
+  open tab stays current without a reload.
 - [`index.html`](index.html) is a single-file static app: it loads the JSON
   once and searches entirely client-side, so results are instant.
 

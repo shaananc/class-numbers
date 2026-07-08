@@ -2,7 +2,8 @@ name: Refresh class data & deploy
 
 on:
   schedule:
-    - cron: "17 3,9,15,21 * * *" # every 6 hours
+    - cron: "17 10-23 * * *" # hourly, 6am–7pm US Eastern
+    - cron: "17 1,4,7 * * *" # every 3 hours overnight
   workflow_dispatch:
   push:
     branches: [main]
