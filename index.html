@@ -153,6 +153,11 @@ select, .toggle {
   font-size: 11.5px; padding: 2px 8px; border-radius: 20px;
   background: var(--accent-soft); color: var(--accent); font-weight: 500;
 }
+.livedot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--open); margin-right: 4px; animation: pulse 2s infinite;
+}
+@keyframes pulse { 50% { opacity: .35; } }
 .empty { text-align: center; color: var(--text-dim); padding: 60px 0; font-size: 15px; }
 #more { display: block; margin: 18px auto 0; padding: 9px 22px; font-size: 14px;
   border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
@@ -192,7 +197,7 @@ footer a { color: var(--accent); }
   <button id="more" hidden>Show more</button>
 
   <footer>
-    Unofficial. Enrollment re-scraped from Tufts SIS hourly during the day (browsers block direct cross-site SIS queries) —
+    Unofficial. Expanded classes show <span class="livedot"></span>live enrollment; other numbers are re-scraped hourly —
     always confirm in <a href="https://sis.it.tufts.edu/psp/paprd/EMPLOYEE/EMPL/h/?tab=TFP_CLASS_SEARCH">SIS</a>.
     <span id="gen"></span>
   </footer>
@@ -201,7 +206,9 @@ footer a { color: var(--accent); }
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-const state = { term: null, data: null, shown: 40 };
+const LIVE_API = "https://starkiller.tail283e6.ts.net";
+const state = { term: null, data: null, shown: 40, liveOk: null };
+const liveCache = new Map(); // class_num -> {enrolled, cap, wait, wait_cap}
 const CAREERS = {
   ASEU: "AS&E Undergrad/Grad", GRAD: "Graduate", MEDS: "Medical",
   DENT: "Dental", VETS: "Veterinary", NUTR: "Nutrition", FLET: "Fletcher",
@@ -338,17 +345,18 @@ function enrHtml(s) {
   const cls = pct >= 100 ? "full" : pct >= 85 ? "near" : "";
   const wl = (s.wait_cap > 0 || s.wait > 0) ? `<div class="wl">waitlist ${s.wait ?? 0}/${s.wait_cap ?? 0}</div>` : "";
   return `<div class="enr">
-    <div class="nums"><span>enrolled</span><b>${en}${cap ? " / " + cap : ""}</b></div>
+    <div class="nums"><span>${s._live ? '<span class="livedot"></span>live' : "enrolled"}</span><b>${en}${cap ? " / " + cap : ""}</b></div>
     <div class="bar"><i class="${cls}" style="width:${pct}%"></i></div>${wl}
   </div>`;
 }
 
 function secHtml(s) {
+  if (liveCache.has(s.class_num)) s = { ...s, ...liveCache.get(s.class_num), _live: true };
   const instr = s.instructors.length ? s.instructors.join(", ") : "STAFF";
   const when = meetingStr(s);
   const room = s.rooms.join("; ");
   const bits = [when, room, s.mode && s.mode !== "In Person" ? s.mode : "", s.campus !== "Medford/Somerville" ? s.campus : ""].filter(Boolean);
-  return `<div class="sec">
+  return `<div class="sec" data-cn="${esc(s.class_num)}">
     <div class="sid"><span class="dot ${esc(s.status)}"></span>${esc(s.sec)}<span class="cn">#${esc(s.class_num)}</span></div>
     <div class="mid"><span class="instr">${esc(instr)}</span><br><span class="when">${esc(bits.join(" · ")) || "time TBA"}</span></div>
     ${enrHtml(s)}
@@ -383,6 +391,39 @@ function render() {
     : `<div class="empty">No classes match${q ? ` “${esc(q)}”` : ""}. Try fewer words or clear the filters.</div>`;
   $("more").hidden = list.length <= state.shown;
 }
+
+// --- live enrollment layer: query the proxy for expanded cards ---
+async function refreshLive(cards) {
+  if (state.liveOk === false && Date.now() - state.liveFailAt < 5 * 60 * 1000) return;
+  const nums = [...new Set(cards.flatMap(card =>
+    [...card.querySelectorAll(".sec[data-cn]")].map(el => el.dataset.cn).filter(Boolean)))];
+  for (let i = 0; i < nums.length; i += 60) {
+    try {
+      const r = await fetch(`${LIVE_API}/details?term=${state.term}&class_nums=${nums.slice(i, i + 60).join(",")}`,
+        { signal: AbortSignal.timeout(20000) });
+      if (!r.ok) throw new Error(r.status);
+      const { results } = await r.json();
+      state.liveOk = true;
+      for (const [cn, d] of Object.entries(results)) {
+        liveCache.set(cn, d);
+        for (const el of document.querySelectorAll(`.sec[data-cn="${cn}"] .enr`))
+          el.outerHTML = enrHtml({ ...d, _live: true });
+      }
+    } catch {
+      state.liveOk = false; // proxy unreachable: stay on scraped data, retry in 5 min
+      state.liveFailAt = Date.now();
+      return;
+    }
+  }
+}
+
+document.addEventListener("toggle", e => {
+  if (e.target.matches?.("details.card") && e.target.open) refreshLive([e.target]);
+}, true);
+// keep open cards fresh while the tab is visible
+setInterval(() => {
+  if (!document.hidden) refreshLive([...document.querySelectorAll("details.card[open]")]);
+}, 60 * 1000);
 
 let deb;
 $("q").addEventListener("input", () => { clearTimeout(deb); deb = setTimeout(() => { state.shown = 40; render(); }, 120); });
