@@ -233,11 +233,54 @@ async function loadIndex() {
   const idx = await (await fetch("data/index.json", { cache: "no-cache" })).json();
   const sel = $("term");
   sel.innerHTML = idx.map(t => `<option value="${t.term}">${esc(t.label)}</option>`).join("");
-  // default to the latest term (last in list = furthest in future)
-  sel.value = idx[idx.length - 1].term;
-  sel.onchange = () => loadTerm(sel.value, idx);
-  await loadTerm(sel.value, idx);
+  // default to the latest term (last in list = furthest in future), unless deep-linked
+  const p0 = readHash();
+  applyingHash = true; // don't let the initial render clobber the deep link
+  const want = p0.get("t");
+  sel.value = idx.some(t => t.term === want) ? want : idx[idx.length - 1].term;
+  sel.onchange = () => loadTerm(sel.value);
+  await loadTerm(sel.value);
+  applyHash(p0);
 }
+
+// --- deep links: keep app state in location.hash ---
+let applyingHash = false;
+function readHash() { return new URLSearchParams(location.hash.slice(1)); }
+
+function applyHash(p = readHash()) {
+  applyingHash = true;
+  $("q").value = p.get("q") || "";
+  if ([...$("career").options].some(o => o.value === (p.get("c") || ""))) $("career").value = p.get("c") || "";
+  if ([...$("subject").options].some(o => o.value === (p.get("s") || ""))) $("subject").value = p.get("s") || "";
+  $("openOnly").checked = p.get("o") === "1";
+  $("hideNonsub").checked = p.get("all") !== "1";
+  state.shown = 40;
+  render();
+  for (const num of (p.get("x") || "").split(",").filter(Boolean)) {
+    for (const card of document.querySelectorAll("details.card"))
+      if (card.querySelector(".cnum")?.textContent === num.replace("-", " ")) card.open = true;
+  }
+  applyingHash = false;
+  writeHash();
+}
+
+function writeHash() {
+  if (applyingHash || !state.data) return;
+  const p = new URLSearchParams();
+  p.set("t", state.term);
+  const q = $("q").value.trim();
+  if (q) p.set("q", q);
+  if ($("career").value) p.set("c", $("career").value);
+  if ($("subject").value) p.set("s", $("subject").value);
+  if ($("openOnly").checked) p.set("o", "1");
+  if (!$("hideNonsub").checked) p.set("all", "1");
+  const open = [...new Set([...document.querySelectorAll("details.card[open] .cnum")]
+    .map(e => e.textContent.replace(" ", "-")))].slice(0, 8);
+  if (open.length) p.set("x", open.join(","));
+  history.replaceState(null, "", "#" + p.toString());
+}
+
+window.addEventListener("hashchange", () => { if (!applyingHash) applyHash(); });
 
 async function loadTerm(term, idx) {
   $("updated").textContent = "loading " + term + "…";
@@ -390,6 +433,7 @@ function render() {
     ? slice.map(c => courseHtml(c, !!q && list.length <= 5)).join("")
     : `<div class="empty">No classes match${q ? ` “${esc(q)}”` : ""}. Try fewer words or clear the filters.</div>`;
   $("more").hidden = list.length <= state.shown;
+  writeHash();
 }
 
 // --- live enrollment layer: query the proxy for expanded cards ---
@@ -418,7 +462,9 @@ async function refreshLive(cards) {
 }
 
 document.addEventListener("toggle", e => {
-  if (e.target.matches?.("details.card") && e.target.open) refreshLive([e.target]);
+  if (!e.target.matches?.("details.card")) return;
+  writeHash();
+  if (e.target.open) refreshLive([e.target]);
 }, true);
 // keep open cards fresh while the tab is visible
 setInterval(() => {
