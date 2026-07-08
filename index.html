@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tufts Class Explorer</title>
+<meta name="description" content="Fast, no-login search of Tufts classes with live-ish enrollment numbers.">
+<style>
+:root {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --surface2: #f0f3f6;
+  --text: #1a2733;
+  --text-dim: #5b6b7b;
+  --border: #dde4ea;
+  --accent: #3172ae;
+  --accent-soft: #e3eefa;
+  --open: #1a8a4a;
+  --closed: #c0392b;
+  --wait: #b07d10;
+  --bar-bg: #e4e9ee;
+  --shadow: 0 1px 3px rgba(16,32,48,.08);
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #10161d;
+    --surface: #1a222c;
+    --surface2: #222c38;
+    --text: #e6edf3;
+    --text-dim: #93a4b4;
+    --border: #2c3947;
+    --accent: #6aa9e0;
+    --accent-soft: #21344a;
+    --open: #3fb970;
+    --closed: #e0705f;
+    --wait: #d9a83c;
+    --bar-bg: #2c3947;
+    --shadow: 0 1px 3px rgba(0,0,0,.4);
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.45;
+}
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 16px 80px; }
+header { padding: 28px 0 6px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+header h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
+header h1 .jumbo { color: var(--accent); }
+#updated { font-size: 12.5px; color: var(--text-dim); }
+
+.controls {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--bg);
+  padding: 10px 0 12px;
+}
+.searchrow { display: flex; gap: 8px; }
+#q {
+  flex: 1;
+  font-size: 17px;
+  padding: 12px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  box-shadow: var(--shadow);
+}
+#q:focus { border-color: var(--accent); }
+.filters { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+select, .toggle {
+  font-size: 13.5px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.toggle { user-select: none; display: inline-flex; align-items: center; gap: 6px; }
+.toggle input { accent-color: var(--accent); margin: 0; }
+.toggle.on { border-color: var(--accent); background: var(--accent-soft); }
+#count { font-size: 13px; color: var(--text-dim); margin-left: auto; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-top: 12px;
+  overflow: hidden;
+}
+.card > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.card > summary::-webkit-details-marker { display: none; }
+.cnum {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.ctitle { font-weight: 600; flex: 1 1 260px; }
+.cmeta { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
+.secs { border-top: 1px solid var(--border); }
+.sec {
+  display: grid;
+  grid-template-columns: minmax(72px,auto) 1fr minmax(150px, 190px);
+  gap: 4px 14px;
+  padding: 11px 16px;
+  border-top: 1px solid var(--border);
+  align-items: center;
+}
+.sec:first-child { border-top: none; }
+.sec .sid { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13.5px; }
+.sec .sid .cn { display: block; font-weight: 400; font-size: 11.5px; color: var(--text-dim); }
+.sec .mid { font-size: 13.5px; min-width: 0; }
+.sec .mid .instr { font-weight: 500; }
+.sec .mid .when { color: var(--text-dim); }
+.enr { text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; }
+.enr .nums { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.enr .nums b { font-size: 14.5px; }
+.bar { height: 5px; background: var(--bar-bg); border-radius: 3px; margin-top: 5px; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 3px; background: var(--open); }
+.bar i.full { background: var(--closed); }
+.bar i.near { background: var(--wait); }
+.wl { font-size: 11.5px; color: var(--text-dim); margin-top: 3px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: baseline; }
+.dot.O { background: var(--open); }
+.dot.C { background: var(--closed); }
+.dot.W { background: var(--wait); }
+.desc {
+  padding: 12px 16px;
+  font-size: 13.5px;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+  white-space: pre-line;
+}
+.desc .tags { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.tag {
+  font-size: 11.5px; padding: 2px 8px; border-radius: 20px;
+  background: var(--accent-soft); color: var(--accent); font-weight: 500;
+}
+.empty { text-align: center; color: var(--text-dim); padding: 60px 0; font-size: 15px; }
+#more { display: block; margin: 18px auto 0; padding: 9px 22px; font-size: 14px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+  color: var(--accent); cursor: pointer; font-weight: 600; }
+#more[hidden] { display: none; }
+footer { margin-top: 40px; font-size: 12px; color: var(--text-dim); text-align: center; }
+footer a { color: var(--accent); }
+@media (max-width: 560px) {
+  .sec { grid-template-columns: 1fr; }
+  .enr { text-align: left; max-width: 230px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="jumbo">Tufts</span> Class Explorer</h1>
+    <span id="updated">loading…</span>
+  </header>
+
+  <div class="controls">
+    <div class="searchrow">
+      <input id="q" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Search by course number, title, instructor, or keyword — e.g. CS 151, Cohney, security…" autofocus>
+    </div>
+    <div class="filters">
+      <select id="term" title="Term"></select>
+      <select id="career" title="Career"><option value="">All careers</option></select>
+      <select id="subject" title="Subject"><option value="">All subjects</option></select>
+      <label class="toggle" id="openTog"><input type="checkbox" id="openOnly">Open seats</label>
+      <span id="count"></span>
+    </div>
+  </div>
+
+  <div id="results"></div>
+  <button id="more" hidden>Show more</button>
+
+  <footer>
+    Unofficial. Data refreshed every few hours from Tufts SIS public class search —
+    always confirm in <a href="https://sis.it.tufts.edu/psp/paprd/EMPLOYEE/EMPL/h/?tab=TFP_CLASS_SEARCH">SIS</a>.
+    <span id="gen"></span>
+  </footer>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const state = { term: null, data: null, shown: 40 };
+const CAREERS = {
+  ASEU: "AS&E Undergrad/Grad", GRAD: "Graduate", MEDS: "Medical",
+  DENT: "Dental", VETS: "Veterinary", NUTR: "Nutrition", FLET: "Fletcher",
+  OTPD: "Occupational Therapy", PA: "Physician Asst", PHPD: "Public Health",
+};
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+}
+
+async function loadIndex() {
+  const idx = await (await fetch("data/index.json", { cache: "no-cache" })).json();
+  const sel = $("term");
+  sel.innerHTML = idx.map(t => `<option value="${t.term}">${esc(t.label)}</option>`).join("");
+  // default to the latest term (last in list = furthest in future)
+  sel.value = idx[idx.length - 1].term;
+  sel.onchange = () => loadTerm(sel.value, idx);
+  await loadTerm(sel.value, idx);
+}
+
+async function loadTerm(term, idx) {
+  $("updated").textContent = "loading " + term + "…";
+  const data = await (await fetch(`data/${term}.json`, { cache: "no-cache" })).json();
+  state.term = term; state.data = data; state.shown = 40;
+  // normalize a search haystack per course
+  for (const c of data.courses) {
+    const instr = new Set(), attrs = new Set();
+    for (const s of c.sections) {
+      s.instructors.forEach(i => instr.add(i));
+      if (s.attrs) s.attrs.split(/[|,]/).forEach(a => { a = a.trim(); if (a) attrs.add(a); });
+    }
+    c._instr = [...instr];
+    c._attrs = [...attrs];
+    c._subject = c.num.split("-")[0];
+    c._hay = (c.num.replace("-", " ") + " " + c.num.replace(/-0*/, " ") + " " + c.num +
+      " " + c.title + " " + c._instr.join(" ") + " " + (c.desc || "")).toLowerCase();
+  }
+  const gen = new Date(data.generated);
+  $("updated").textContent = `enrollment as of ${gen.toLocaleString([], {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"})}`;
+  buildFilters(data);
+  render();
+}
+
+function buildFilters(data) {
+  const subjects = [...new Set(data.courses.map(c => c._subject))].sort();
+  $("subject").innerHTML = '<option value="">All subjects</option>' +
+    subjects.map(s => `<option>${esc(s)}</option>`).join("");
+  const careers = [...new Set(data.courses.map(c => c.career))].sort();
+  $("career").innerHTML = '<option value="">All careers</option>' +
+    careers.map(c => `<option value="${esc(c)}">${esc(CAREERS[c] || c)}</option>`).join("");
+}
+
+function score(c, terms) {
+  let s = 0;
+  const numNorm = c.num.replace("-", " ").toLowerCase();
+  for (const t of terms) {
+    if (!c._hay.includes(t)) return -1;
+    if (numNorm.startsWith(t) || c.num.toLowerCase().startsWith(t)) s += 30;
+    else if (c.title.toLowerCase().includes(t)) s += 12;
+    else if (c._instr.some(i => i.toLowerCase().includes(t))) s += 10;
+    else s += 1;
+  }
+  return s;
+}
+
+function matches() {
+  const q = $("q").value.trim().toLowerCase();
+  const subj = $("subject").value, car = $("career").value, open = $("openOnly").checked;
+  const terms = q.split(/\s+/).filter(Boolean);
+  const out = [];
+  for (const c of state.data.courses) {
+    if (subj && c._subject !== subj) continue;
+    if (car && c.career !== car) continue;
+    if (open && !c.sections.some(s => s.status === "O")) continue;
+    let sc = 0;
+    if (terms.length) {
+      sc = score(c, terms);
+      if (sc < 0) continue;
+    }
+    out.push([sc, c]);
+  }
+  out.sort((a, b) => b[0] - a[0] || a[1].num.localeCompare(b[1].num));
+  return out.map(x => x[1]);
+}
+
+function meetingStr(s) {
+  const parts = s.meetings.map(m => `${(m.days || []).join("")} ${m.start}–${m.end}`);
+  return [...new Set(parts)].join(" · ");
+}
+
+function enrHtml(s) {
+  if (s.cap == null && s.enrolled == null) return '<div class="enr"><span class="cmeta">no data</span></div>';
+  const en = s.enrolled ?? 0, cap = s.cap ?? 0;
+  const pct = cap > 0 ? Math.min(100, Math.round(en / cap * 100)) : (en > 0 ? 100 : 0);
+  const cls = pct >= 100 ? "full" : pct >= 85 ? "near" : "";
+  const wl = (s.wait_cap > 0 || s.wait > 0) ? `<div class="wl">waitlist ${s.wait ?? 0}/${s.wait_cap ?? 0}</div>` : "";
+  return `<div class="enr">
+    <div class="nums"><span>enrolled</span><b>${en}${cap ? " / " + cap : ""}</b></div>
+    <div class="bar"><i class="${cls}" style="width:${pct}%"></i></div>${wl}
+  </div>`;
+}
+
+function secHtml(s) {
+  const instr = s.instructors.length ? s.instructors.join(", ") : "STAFF";
+  const when = meetingStr(s);
+  const room = s.rooms.join("; ");
+  const bits = [when, room, s.mode && s.mode !== "In Person" ? s.mode : "", s.campus !== "Medford/Somerville" ? s.campus : ""].filter(Boolean);
+  return `<div class="sec">
+    <div class="sid"><span class="dot ${esc(s.status)}"></span>${esc(s.sec)}<span class="cn">#${esc(s.class_num)}</span></div>
+    <div class="mid"><span class="instr">${esc(instr)}</span><br><span class="when">${esc(bits.join(" · ")) || "time TBA"}</span></div>
+    ${enrHtml(s)}
+  </div>`;
+}
+
+function courseHtml(c, openNow) {
+  const totEn = c.sections.reduce((a, s) => a + (s.enrolled || 0), 0);
+  const nsec = c.sections.length;
+  const tags = c._attrs.slice(0, 6).map(a => `<span class="tag">${esc(a)}</span>`).join("");
+  const notes = [...new Set(c.sections.map(s => s.note).filter(Boolean))].join("\n\n");
+  return `<details class="card"${openNow ? " open" : ""}>
+    <summary>
+      <span class="cnum">${esc(c.num.replace("-", " "))}</span>
+      <span class="ctitle">${esc(c.title)}</span>
+      <span class="cmeta">${totEn} enrolled · ${nsec} section${nsec > 1 ? "s" : ""}</span>
+    </summary>
+    <div class="secs">${c.sections.map(secHtml).join("")}</div>
+    ${(c.desc || notes || tags) ? `<div class="desc">${esc(c.desc || "")}${notes ? "\n\n" + esc(notes) : ""}${tags ? `<div class="tags">${tags}</div>` : ""}</div>` : ""}
+  </details>`;
+}
+
+function render() {
+  const list = matches();
+  const q = $("q").value.trim();
+  $("count").textContent = `${list.length} course${list.length === 1 ? "" : "s"}`;
+  $("openTog").classList.toggle("on", $("openOnly").checked);
+  const slice = list.slice(0, state.shown);
+  $("results").innerHTML = slice.length
+    ? slice.map(c => courseHtml(c, !!q && list.length <= 5)).join("")
+    : `<div class="empty">No classes match${q ? ` “${esc(q)}”` : ""}. Try fewer words or clear the filters.</div>`;
+  $("more").hidden = list.length <= state.shown;
+}
+
+let deb;
+$("q").addEventListener("input", () => { clearTimeout(deb); deb = setTimeout(() => { state.shown = 40; render(); }, 120); });
+for (const id of ["subject", "career", "openOnly"])
+  $(id).addEventListener("change", () => { state.shown = 40; render(); });
+$("more").addEventListener("click", () => { state.shown += 40; render(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "/" && document.activeElement !== $("q")) { e.preventDefault(); $("q").focus(); }
+});
+
+loadIndex().catch(e => {
+  $("results").innerHTML = `<div class="empty">Failed to load data (${esc(e.message)}). If this is a fresh deploy, the first data refresh may still be running.</div>`;
+  $("updated").textContent = "";
+});
+</script>
+</body>
+</html>
