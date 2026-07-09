@@ -36,6 +36,34 @@ stale-while-revalidate (24 h), single-flight deduplication, 20 s negative
 cache, and `Cache-Control: max-age=30` toward browsers — so SIS sees at most
 one request per class per minute regardless of visitor count.
 
+## JSON API
+
+Everything below is public, CORS-open (`Access-Control-Allow-Origin: *`), and
+needs no key.
+
+**Bulk data** (served by GitHub Pages, updated hourly):
+- `GET /data/index.json` — list of terms with course counts and last-scrape time
+- `GET /data/<term>.json` — full catalog for a term (all courses + sections;
+  the Fall file is ~4 MB, so prefer the endpoints below for single lookups)
+
+**Live queries** (served by `starkiller.tail283e6.ts.net`, backed by the same
+proxy described above):
+- `GET /api/terms` — mirrors `data/index.json`
+- `GET /api/search?term=2268&q=cs+security&limit=25` — full-text search over
+  course number (with or without dashes/leading zeros), title, and instructor;
+  returns matching courses with their last-scraped enrollment (not live)
+- `GET /api/course/<term>/<num>` — one course by number (`CS-0151`, `cs151`,
+  `CS 0151` all resolve), with **live** enrollment merged into each section
+  (`"live": true`, `"stale": true` if served from the stale-while-revalidate
+  cache while a refresh is in flight). 404 if the number doesn't exist that term.
+- `GET /details?term=2268&class_nums=83570,83571` — the low-level batch
+  endpoint the frontend uses; raw live enrollment by class number, no catalog
+  lookup
+
+Known limitation: if two courses share a compact alias (e.g. two different
+special-topics sections both numbered `CS-0151`), `/api/course` returns
+whichever was indexed last — use `/api/search` to see all of them.
+
 ## Local development
 
 ```sh

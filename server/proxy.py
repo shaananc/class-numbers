@@ -37,6 +37,14 @@ NEG_TTL = 20            # remember failures briefly
 MAX_BATCH = 60
 UPSTREAM_CONCURRENCY = 8
 
+# The catalog (course list + section metadata, but not live enrollment) is
+# the same data the static site ships; rather than re-scrape it here we just
+# read the already-published mirror off GitHub Pages and cache it in memory.
+CATALOG_INDEX_URL = "https://shaananc.github.io/class-numbers/data/index.json"
+CATALOG_TERM_URL = "https://shaananc.github.io/class-numbers/data/{term}.json"
+CATALOG_TTL = 600      # matches the scrape cadence closely enough
+TERM_RE = re.compile(r"2\d{3}")
+
 _jar = http.cookiejar.CookieJar()
 _opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(_jar))
 _opener.addheaders = [("User-Agent", USER_AGENT)]
@@ -114,6 +122,54 @@ def _refresh(key):
         return entry
 
 
+_catalog = {}            # term -> {courses, by_alias, hay, label, loaded_at}
+_catalog_lock = threading.Lock()
+
+
+def _num_aliases(num):
+    """'CS-0151' -> {'cs0151', 'cs151'} so 'CS151'/'cs 151'/'CS-0151' all resolve."""
+    subj, _, catnum = num.partition("-")
+    bare = catnum.lstrip("0") or catnum
+    return {f"{subj}{catnum}".lower(), f"{subj}{bare}".lower()}
+
+
+def _load_catalog(term, force=False):
+    with _catalog_lock:
+        entry = _catalog.get(term)
+        if entry and not force and time.time() - entry["loaded_at"] < CATALOG_TTL:
+            return entry
+    with urllib.request.urlopen(CATALOG_TERM_URL.format(term=term), timeout=30) as resp:
+        data = json.loads(resp.read())
+    by_alias, hay = {}, []
+    for c in data["courses"]:
+        for alias in _num_aliases(c["num"]):
+            by_alias[alias] = c
+        instr = {i for s in c["sections"] for i in s.get("instructors", [])}
+        aliases = " ".join(_num_aliases(c["num"]))
+        hay.append((c, f"{c['num']} {aliases} {c['title']} {' '.join(instr)}".lower()))
+    entry = {"courses": data["courses"], "by_alias": by_alias, "hay": hay,
+             "label": data["label"], "generated": data["generated"], "loaded_at": time.time()}
+    with _catalog_lock:
+        _catalog[term] = entry
+    return entry
+
+
+def _course_with_live(term, course):
+    """Shallow-copy a catalog course, replacing each section's enrollment with live data."""
+    out = dict(course)
+    sections = []
+    for s in course["sections"]:
+        s = dict(s)
+        data, stale = get_details(term, s["class_num"])
+        if data is not None:
+            s.update(data)
+            s["live"] = True
+            s["stale"] = stale
+        sections.append(s)
+    out["sections"] = sections
+    return out
+
+
 def get_details(term, class_num):
     """Returns (data|None, is_stale). Serves stale instantly, refreshes in background."""
     key = (term, class_num)
@@ -154,6 +210,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
             with _cache_lock:
                 n = len(_cache)
             return self._send(200, {"ok": True, "cached": n}, max_age=0)
+        if url.path == "/api/terms":
+            return self._api_terms()
+        if url.path == "/api/search":
+            return self._api_search(urllib.parse.parse_qs(url.query))
+        m = re.fullmatch(r"/api/course/(\w+)/([\w-]+)", url.path)
+        if m:
+            return self._api_course(*m.groups())
         if url.path != "/details":
             return self._send(404, {"error": "not found"}, max_age=0)
         q = urllib.parse.parse_qs(url.query)
@@ -182,6 +245,50 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 any_stale = any_stale or stale
         self._send(200, {"results": results, "stale": any_stale,
                          "ts": int(time.time())})
+
+    def _api_terms(self):
+        try:
+            with urllib.request.urlopen(CATALOG_INDEX_URL, timeout=15) as resp:
+                idx = json.loads(resp.read())
+        except Exception:
+            return self._send(502, {"error": "catalog index unavailable"}, max_age=0)
+        self._send(200, {"terms": idx}, max_age=60)
+
+    def _api_search(self, q):
+        term = (q.get("term") or [""])[0]
+        query = (q.get("q") or [""])[0].strip().lower()
+        try:
+            limit = max(1, min(100, int((q.get("limit") or ["25"])[0])))
+        except ValueError:
+            limit = 25
+        if not TERM_RE.fullmatch(term):
+            return self._send(400, {"error": "bad or missing term"}, max_age=0)
+        try:
+            entry = _load_catalog(term)
+        except Exception:
+            return self._send(502, {"error": "catalog unavailable"}, max_age=0)
+        terms = query.split()
+        matches = [c for c, hay in entry["hay"] if all(t in hay for t in terms)]
+        self._send(200, {
+            "term": term, "label": entry["label"], "generated": entry["generated"],
+            "count": len(matches), "results": matches[:limit],
+        }, max_age=120)
+
+    def _api_course(self, term, num):
+        if not TERM_RE.fullmatch(term):
+            return self._send(400, {"error": "bad term"}, max_age=0)
+        try:
+            entry = _load_catalog(term)
+        except Exception:
+            return self._send(502, {"error": "catalog unavailable"}, max_age=0)
+        norm = re.sub(r"[\s-]+", "", num).lower()
+        course = entry["by_alias"].get(norm)
+        if not course:
+            return self._send(404, {"error": "course not found"}, max_age=30)
+        self._send(200, {
+            "term": term, "label": entry["label"],
+            "course": _course_with_live(term, course),
+        }, max_age=0)
 
     def log_message(self, fmt, *args):
         pass  # keep journal quiet; systemd captures errors via tracebacks
