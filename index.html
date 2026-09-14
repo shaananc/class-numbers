@@ -407,8 +407,30 @@ function secHtml(s) {
   </div>`;
 }
 
+// Labs/recitations/discussions are companion meetings for the same students
+// already counted in the primary (lecture-type) section — summing every
+// section's "enrolled" double- (or triple-)counts those students. Count only
+// primary-type sections; if a course has none (e.g. a standalone lab), fall
+// back to whichever companion type has the fewest sections, since that's the
+// undivided "parent" group the others were split from.
+const COMPANION_COMPONENTS = new Set(["Recitation", "Recitation (Optional)", "Laboratory", "Discussion", "Once Per Week", "Small Group"]);
+function courseEnrolled(c) {
+  const primary = c.sections.filter(s => !COMPANION_COMPONENTS.has(s.component));
+  if (primary.length) return primary.reduce((a, s) => a + (s.enrolled || 0), 0);
+  const byType = new Map();
+  for (const s of c.sections) {
+    const t = byType.get(s.component) || { n: 0, en: 0 };
+    t.n++; t.en += s.enrolled || 0;
+    byType.set(s.component, t);
+  }
+  let best = null;
+  for (const t of byType.values())
+    if (!best || t.n < best.n || (t.n === best.n && t.en > best.en)) best = t;
+  return best ? best.en : 0;
+}
+
 function courseHtml(c, openNow) {
-  const totEn = c.sections.reduce((a, s) => a + (s.enrolled || 0), 0);
+  const totEn = courseEnrolled(c);
   const nsec = c.sections.length;
   const tags = c._attrs.slice(0, 6).map(a => `<span class="tag">${esc(a)}</span>`).join("");
   const notes = [...new Set(c.sections.map(s => s.note).filter(Boolean))].join("\n\n");
