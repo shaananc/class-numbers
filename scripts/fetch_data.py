@@ -225,6 +225,21 @@ def main():
         sys.exit(1)
     print(f"active terms: {', '.join(terms)}", flush=True)
 
+    # first_seen drives the site's "new semester" banner, so carry it forward;
+    # a term already in the index without one predates tracking and isn't "new"
+    old_index = {}
+    try:
+        with open(os.path.join(DATA_DIR, "index.json")) as f:
+            old_index = {t["term"]: t for t in json.load(f)}
+    except (OSError, ValueError):
+        pass
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    def first_seen(term):
+        if term in old_index:
+            return old_index[term].get("first_seen")
+        return now
+
     index = []
     for term in terms:
         try:
@@ -237,12 +252,14 @@ def main():
                     prev = json.load(f)
                 index.append({"term": term, "label": prev["label"],
                               "generated": prev["generated"],
+                              "first_seen": first_seen(term),
                               "courses": len(prev["courses"])})
             continue
         with open(os.path.join(DATA_DIR, f"{term}.json"), "w") as f:
             json.dump(data, f, separators=(",", ":"))
         index.append({"term": term, "label": data["label"],
                       "generated": data["generated"],
+                      "first_seen": first_seen(term),
                       "courses": len(data["courses"])})
 
     if not index:
