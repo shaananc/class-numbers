@@ -9,19 +9,14 @@
 try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
 </script>
 <link rel="preload" href="fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-/* Typography follows brand.tufts.edu/guidelines/typography: IvyMode for large
-   headlines, Proxima Nova for UI/body, Meta Serif for reading text. Those are
-   licensed (Adobe Fonts), so each stack names them first and falls back to
-   self-hosted OFL lookalikes chosen by side-by-side comparison. */
+/* Typography follows brand.tufts.edu/guidelines/typography: Proxima Nova for
+   headlines and UI, Meta Serif for reading text. Both are licensed (Adobe
+   Fonts), so each stack names them first and falls back to self-hosted OFL
+   lookalikes chosen by side-by-side comparison. */
 @font-face {
   font-family: "Figtree"; src: url("fonts/figtree.woff2") format("woff2");
   font-weight: 300 900; font-display: swap;
-}
-@font-face {
-  font-family: "Instrument Serif"; src: url("fonts/instrument-serif.woff2") format("woff2");
-  font-weight: 400; font-display: swap;
 }
 @font-face {
   font-family: "Source Serif 4"; src: url("fonts/source-serif-4.woff2") format("woff2");
@@ -55,7 +50,6 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
   --shadow:        0 1px 3px var(--shadow-color);
   --shadow-lg:     0 10px 30px -8px light-dark(rgb(61 46 37 / .25), rgb(0 0 0 / .6));
   --radius: 10px;
-  --font-display: "ivymode", "IvyMode", "Ivy Mode", "Instrument Serif", Georgia, serif;
   --font-sans: "proxima-nova", "Proxima Nova", "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-serif: "ff-meta-serif-web-pro", "Meta Serif Pro", "FF Meta Serif", "Source Serif 4", Georgia, serif;
   --chev-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -88,8 +82,8 @@ button, input, select { font-family: inherit; }
 .wrap { max-width: 880px; margin: 0 auto; padding: 0 16px 80px; }
 header { padding: 30px 0 10px; display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; }
 header h1 {
-  font-family: var(--font-display); font-weight: 400;
-  font-size: clamp(32px, 5vw, 42px); line-height: 1; letter-spacing: -.01em;
+  font-weight: 800;
+  font-size: clamp(26px, 4vw, 32px); line-height: 1.05; letter-spacing: -.025em;
   margin: 0;
 }
 header h1 .jumbo { color: var(--brand); }
@@ -335,7 +329,7 @@ option .code { font-weight: 600; }
 @keyframes pulse { 50% { opacity: .35; } }
 .empty { text-align: center; color: var(--text-dim); padding: 64px 16px; }
 .empty h2 {
-  font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1.15;
+  font-weight: 750; font-size: 22px; line-height: 1.2; letter-spacing: -.015em;
   color: var(--text); margin: 0 0 8px; text-wrap: balance;
 }
 .empty p { margin: 0 0 18px; }
