@@ -8,7 +8,25 @@
 <script>
 try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
 </script>
+<link rel="preload" href="fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+/* Typography follows brand.tufts.edu/guidelines/typography: IvyMode for large
+   headlines, Proxima Nova for UI/body, Meta Serif for reading text. Those are
+   licensed (Adobe Fonts), so each stack names them first and falls back to
+   self-hosted OFL lookalikes chosen by side-by-side comparison. */
+@font-face {
+  font-family: "Figtree"; src: url("fonts/figtree.woff2") format("woff2");
+  font-weight: 300 900; font-display: swap;
+}
+@font-face {
+  font-family: "Instrument Serif"; src: url("fonts/instrument-serif.woff2") format("woff2");
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: "Source Serif 4"; src: url("fonts/source-serif-4.woff2") format("woff2");
+  font-weight: 200 900; font-display: swap;
+}
 /* Tufts brand palette (brand.tufts.edu/guidelines/color). Tufts Blue #3E8EDE is
    too light for small text on light grounds, so light mode uses Ballou Blue for
    text accents and keeps Tufts Blue for large/decorative use. Flame Orange is
@@ -37,6 +55,10 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
   --shadow:        0 1px 3px var(--shadow-color);
   --shadow-lg:     0 10px 30px -8px light-dark(rgb(61 46 37 / .25), rgb(0 0 0 / .6));
   --radius: 10px;
+  --font-display: "ivymode", "IvyMode", "Ivy Mode", "Instrument Serif", Georgia, serif;
+  --font-sans: "proxima-nova", "Proxima Nova", "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "ff-meta-serif-web-pro", "Meta Serif Pro", "FF Meta Serif", "Source Serif 4", Georgia, serif;
+  --chev-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
@@ -53,17 +75,28 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
 html { scroll-behavior: smooth; }
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
   background: var(--bg);
   color: var(--text);
-  line-height: 1.45;
   border-top: 4px solid var(--brand);
 }
+button, input, select { font-family: inherit; }
 .wrap { max-width: 880px; margin: 0 auto; padding: 0 16px 80px; }
-header { padding: 24px 0 6px; display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
-header h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
+header { padding: 30px 0 10px; display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; }
+header h1 {
+  font-family: var(--font-display); font-weight: 400;
+  font-size: clamp(32px, 5vw, 42px); line-height: 1; letter-spacing: -.01em;
+  margin: 0;
+}
 header h1 .jumbo { color: var(--brand); }
-#updated { font-size: 12.5px; color: var(--text-dim); }
+#updated {
+  display: block; margin-top: 6px;
+  font-size: 13px; color: var(--text-dim); font-variant-numeric: tabular-nums;
+}
 .seg.themes { margin-left: auto; height: 32px; }
 .seg.themes button { padding: 0 9px; display: inline-flex; align-items: center; }
 .themes svg { width: 16px; height: 16px; }
@@ -94,7 +127,7 @@ header h1 .jumbo { color: var(--brand); }
    a hover state; and the accent "on" style whenever a control narrows results. */
 select, .toggle, .seg {
   height: 36px;
-  font: inherit; font-size: 13.5px; font-weight: 500;
+  font: inherit; font-size: 14px; font-weight: 500;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   background-color: var(--surface);
@@ -113,7 +146,6 @@ select {
 .select {
   position: relative; display: inline-flex;
   --chev: var(--text-dim);
-  --chev-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 .select:has(> select.on) { --chev: var(--accent); }
 .select::after {
@@ -151,7 +183,7 @@ option .code { font-weight: 600; }
   option {
     display: flex; align-items: center; gap: 8px;
     padding: 6px 10px; border-radius: 6px;
-    font-size: 13.5px; cursor: pointer;
+    font-size: 14px; cursor: pointer;
   }
   option:hover { background: var(--hover); }
   option:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
@@ -182,15 +214,16 @@ option .code { font-weight: 600; }
 .seg button:hover:not([aria-pressed="true"]) { background: var(--hover); }
 .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .seg button:focus-visible { outline-offset: -2px; }
-.seg .new {
-  font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
-  color: var(--accent); margin-left: 6px;
+/* Small all-caps labels: a nod to the guide's use of Americane for labels */
+.label, .seg .new, .badge, .st {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
 }
+.seg .new { color: var(--accent); margin-left: 6px; }
 .toggle { user-select: none; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; }
 .toggle input { accent-color: var(--accent); margin: 0; width: 15px; height: 15px; }
 .toggle input:focus-visible { outline: none; }
 .toggle:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
-#count { font-size: 13px; color: var(--text-dim); margin-left: auto; }
+.resbar { margin: 18px 2px 0; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 
 .card {
   background: var(--surface);
@@ -211,46 +244,65 @@ option .code { font-weight: 600; }
 .card > summary {
   list-style: none;
   cursor: pointer;
-  padding: 14px 16px;
+  padding: 15px 16px 15px 18px;
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 4px 14px;
   flex-wrap: wrap;
 }
 .card > summary::-webkit-details-marker { display: none; }
+.card > summary:hover { background: var(--hover); }
 .card > summary:focus-visible { outline-offset: -2px; border-radius: var(--radius); }
 .cnum {
-  font-weight: 650;
+  font-weight: 650; font-size: 14.5px; letter-spacing: .01em;
   font-variant-numeric: tabular-nums;
   color: var(--accent);
   white-space: nowrap;
+  min-width: 6.4em; /* aligns titles down the list */
 }
-.ctitle { font-weight: 600; flex: 1 1 260px; text-wrap: balance; }
-.cmeta { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
+.ctitle { font-size: 16px; font-weight: 600; line-height: 1.3; flex: 1 1 260px; text-wrap: balance; }
+.badge {
+  font-size: 9.5px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;
+  border: 1px solid var(--border-strong); color: var(--text-dim);
+  vertical-align: 2px; white-space: nowrap;
+}
+.cmeta {
+  font-size: 13px; color: var(--text-dim); white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: baseline; gap: 12px;
+}
+.cmeta b { color: var(--text); font-weight: 600; }
+.cmeta::after {
+  content: ""; align-self: center; width: 10px; height: 10px; flex: none;
+  background: var(--text-dim); mask: var(--chev-img) center / contain no-repeat;
+  transition: rotate .2s;
+}
+.card[open] .cmeta::after { rotate: 180deg; }
 .secs { border-top: 1px solid var(--border); }
 .sec {
   display: grid;
   grid-template-columns: minmax(72px,auto) 1fr minmax(150px, 190px);
-  gap: 4px 14px;
-  padding: 11px 16px;
+  gap: 4px 16px;
+  padding: 12px 16px 12px 18px;
   border-top: 1px solid var(--border);
   align-items: center;
 }
 .sec:first-child { border-top: none; }
-.sec .sid { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13.5px; }
-.sec .sid .cn { display: block; font-weight: 400; font-size: 11.5px; color: var(--text-dim); }
-.sec .mid { font-size: 13.5px; min-width: 0; }
-.sec .mid .instr { font-weight: 500; }
-.sec .mid .when { color: var(--text-dim); }
-.enr { text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; }
+.sec .sid { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; line-height: 1.35; }
+.sec .sid .cn { display: block; font-weight: 400; font-size: 12px; color: var(--text-dim); }
+.sec .mid { font-size: 14px; min-width: 0; line-height: 1.4; }
+.sec .mid .instr { font-weight: 600; }
+.sec .mid .when { color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.sec .mid .tba { font-style: italic; }
+.enr { text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--text-dim); }
 .enr .nums { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.enr .nums b { font-size: 14.5px; }
+.enr .nums b { font-size: 15.5px; font-weight: 650; color: var(--text); }
 .bar { height: 5px; background: var(--bar-bg); border-radius: 3px; margin-top: 5px; overflow: hidden; }
 .bar i { display: block; height: 100%; border-radius: 3px; background: var(--open); }
 .bar i.full { background: var(--closed); }
 .bar i.near { background: var(--wait); }
 .wl { font-size: 11.5px; color: var(--text-dim); margin-top: 3px; }
-.st { display: block; font-size: 11.5px; font-weight: 600; margin-top: 1px; }
+.st { display: block; margin-top: 3px; }
 .st::before {
   content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
   margin-right: 4px; background: currentColor; vertical-align: 1px;
@@ -259,17 +311,21 @@ option .code { font-weight: 600; }
 .st.C { color: var(--closed); }
 .st.W { color: var(--wait); }
 .desc {
-  padding: 12px 16px;
-  font-size: 13.5px;
-  color: var(--text-dim);
+  padding: 16px 18px 18px;
   border-top: 1px solid var(--border);
   background: var(--surface2);
+}
+.desc .prose {
+  max-width: 68ch; /* comfortable measure for reading */
+  font-family: var(--font-serif); font-size: 15.5px; line-height: 1.6;
+  color: var(--text);
   white-space: pre-line;
   text-wrap: pretty;
+  hanging-punctuation: first;
 }
-.desc .tags { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.desc .tags { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
 .tag {
-  font-size: 11.5px; padding: 2px 8px; border-radius: 20px;
+  font-size: 12px; padding: 3px 9px; border-radius: 20px;
   background: var(--accent-soft); color: var(--accent); font-weight: 500;
 }
 .livedot {
@@ -277,25 +333,39 @@ option .code { font-weight: 600; }
   background: var(--open); margin-right: 4px; animation: pulse 2s infinite;
 }
 @keyframes pulse { 50% { opacity: .35; } }
-.empty { text-align: center; color: var(--text-dim); padding: 60px 0; font-size: 15px; }
-#more { display: block; margin: 18px auto 0; padding: 9px 22px; font-size: 14px;
-  border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
-  color: var(--accent); cursor: pointer; font-weight: 600; }
+.empty { text-align: center; color: var(--text-dim); padding: 64px 16px; }
+.empty h2 {
+  font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1.15;
+  color: var(--text); margin: 0 0 8px; text-wrap: balance;
+}
+.empty p { margin: 0 0 18px; }
+.btn, #more {
+  font: inherit; font-size: 14px; font-weight: 600;
+  padding: 9px 20px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border-strong); background: var(--surface); color: var(--accent);
+}
+.btn:hover, #more:hover { border-color: var(--accent); background: var(--accent-soft); }
+#more { display: block; margin: 20px auto 0; }
 #more[hidden] { display: none; }
-footer { margin-top: 40px; font-size: 12px; color: var(--text-dim); text-align: center; }
+footer { margin-top: 48px; font-size: 13px; line-height: 1.6; color: var(--text-dim); text-align: center; text-wrap: balance; }
 footer a { color: var(--accent); }
 @media (max-width: 560px) {
   .controls { position: static; }  /* sticky filters would cover half a phone screen */
   .sec { grid-template-columns: 1fr; }
-  .enr { text-align: left; max-width: 230px; }
+  .enr { text-align: left; max-width: 260px; }
+  .cnum { min-width: 0; }
+  .cmeta { order: 1; margin-left: auto; }
+  .ctitle { flex-basis: 100%; order: 2; }
 }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1><span class="jumbo">Tufts</span> Class Explorer</h1>
-    <span id="updated">loading…</span>
+    <div>
+      <h1><span class="jumbo">Tufts</span> Class Explorer</h1>
+      <span id="updated">loading…</span>
+    </div>
     <div class="seg themes" role="group" aria-label="Color theme">
       <button type="button" data-theme-set="system" aria-label="Match system theme" title="Match system">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
@@ -322,10 +392,10 @@ footer a { color: var(--accent); }
       <span class="select"><select id="subject" aria-label="Subject"><option value="">All subjects</option></select></span>
       <label class="toggle" id="openTog"><input type="checkbox" id="openOnly">Open seats</label>
       <label class="toggle" id="subTog" title="Hide independent study, thesis, internship, and similar placeholder listings"><input type="checkbox" id="hideNonsub" checked>Hide ind. study&hairsp;/&hairsp;thesis</label>
-      <span id="count" role="status" aria-live="polite"></span>
     </div>
   </div>
 
+  <div class="resbar label" id="count" role="status" aria-live="polite"></div>
   <div id="results"></div>
   <button id="more" hidden>Show more</button>
   </main>
@@ -602,8 +672,19 @@ function matches() {
 }
 
 function meetingStr(s) {
-  const parts = s.meetings.map(m => `${(m.days || []).join("")} ${m.start}–${m.end}`);
+  const parts = s.meetings
+    .filter(m => !(m.start === "12:00AM" && m.end === "12:00AM")) // SIS placeholder for "not scheduled"
+    .map(m => `${(m.days || []).join("")} ${m.start}–${m.end}`.trim());
   return [...new Set(parts)].join(" · ");
+}
+
+// rooms, delivery mode and campus often repeat each other ("Online · Online · Online")
+function whereStr(s) {
+  const bits = [...s.rooms.filter(r => r && r !== "TBA"),
+    s.mode && s.mode !== "In Person" ? s.mode : "",
+    s.campus && s.campus !== "Medford/Somerville" ? s.campus : ""].filter(Boolean);
+  const seen = new Set();
+  return bits.filter(b => !seen.has(b.toLowerCase()) && seen.add(b.toLowerCase())).join(" · ");
 }
 
 function enrHtml(s) {
@@ -621,12 +702,11 @@ function enrHtml(s) {
 function secHtml(s) {
   if (liveCache.has(s.class_num)) s = { ...s, ...liveCache.get(s.class_num), _live: true };
   const instr = s.instructors.length ? s.instructors.join(", ") : "STAFF";
-  const when = meetingStr(s);
-  const room = s.rooms.join("; ");
-  const bits = [when, room, s.mode && s.mode !== "In Person" ? s.mode : "", s.campus !== "Medford/Somerville" ? s.campus : ""].filter(Boolean);
+  const when = meetingStr(s), where = whereStr(s);
+  const whenHtml = (when ? esc(when) : '<span class="tba">Time TBA</span>') + (where ? " · " + esc(where) : "");
   return `<div class="sec" data-cn="${esc(s.class_num)}">
     <div class="sid">${esc(s.sec)}<span class="cn">#${esc(s.class_num)}</span>${STATUS[s.status] ? `<span class="st ${esc(s.status)}">${STATUS[s.status]}</span>` : ""}</div>
-    <div class="mid"><span class="instr">${esc(instr)}</span><br><span class="when">${esc(bits.join(" · ")) || "time TBA"}</span></div>
+    <div class="mid"><span class="instr">${esc(instr)}</span><br><span class="when">${whenHtml}</span></div>
     ${enrHtml(s)}
   </div>`;
 }
@@ -638,41 +718,52 @@ function secHtml(s) {
 // back to whichever companion type has the fewest sections, since that's the
 // undivided "parent" group the others were split from.
 const COMPANION_COMPONENTS = new Set(["Recitation", "Recitation (Optional)", "Laboratory", "Discussion", "Once Per Week", "Small Group"]);
-function courseEnrolled(c) {
+function courseTotals(c) {
+  const sum = secs => secs.reduce((a, s) => ({ en: a.en + (s.enrolled || 0), cap: a.cap + (s.cap || 0) }), { en: 0, cap: 0 });
   const primary = c.sections.filter(s => !COMPANION_COMPONENTS.has(s.component));
-  if (primary.length) return primary.reduce((a, s) => a + (s.enrolled || 0), 0);
+  if (primary.length) return sum(primary);
   const byType = new Map();
-  for (const s of c.sections) {
-    const t = byType.get(s.component) || { n: 0, en: 0 };
-    t.n++; t.en += s.enrolled || 0;
-    byType.set(s.component, t);
-  }
+  for (const s of c.sections) byType.set(s.component, [...(byType.get(s.component) || []), s]);
   let best = null;
-  for (const t of byType.values())
+  for (const secs of byType.values()) {
+    const t = { n: secs.length, ...sum(secs) };
     if (!best || t.n < best.n || (t.n === best.n && t.en > best.en)) best = t;
-  return best ? best.en : 0;
+  }
+  return best || { en: 0, cap: 0 };
+}
+
+// what sets an offering apart from a same-numbered sibling (online / half-term)
+function courseBadges(c) {
+  const b = [];
+  if (c.sections.length && c.sections.every(s => s.campus === "Online")) b.push("Online");
+  const sessions = new Set(c.sections.map(s => s.session).filter(x => x && x !== "Regular"));
+  for (const s of sessions) b.push(s.replace(/([a-z])([A-Z])/g, "$1 $2"));
+  return b;
 }
 
 function courseHtml(c, openNow) {
-  const totEn = courseEnrolled(c);
+  const { en, cap } = courseTotals(c);
   const nsec = c.sections.length;
   const tags = c._attrs.slice(0, 6).map(a => `<span class="tag">${esc(a)}</span>`).join("");
   const notes = [...new Set(c.sections.map(s => s.note).filter(Boolean))].join("\n\n");
+  const prose = [c.desc, notes].filter(Boolean).map(esc).join("\n\n");
+  const badges = courseBadges(c).map(b => `<span class="badge">${esc(b)}</span>`).join("");
   return `<details class="card"${openNow ? " open" : ""}>
     <summary>
       <span class="cnum">${esc(c.num.replace("-", " "))}</span>
-      <span class="ctitle">${esc(c.title)}</span>
-      <span class="cmeta">${totEn} enrolled · ${nsec} section${nsec > 1 ? "s" : ""}</span>
+      <span class="ctitle">${esc(c.title).replace(/ - /g, " – ")}${badges}</span>
+      <span class="cmeta"><span><b>${en.toLocaleString()}</b>${cap ? ` / ${cap.toLocaleString()}` : ""} enrolled · ${nsec} section${nsec > 1 ? "s" : ""}</span></span>
     </summary>
     <div class="secs">${c.sections.map(secHtml).join("")}</div>
-    ${(c.desc || notes || tags) ? `<div class="desc">${esc(c.desc || "")}${notes ? "\n\n" + esc(notes) : ""}${tags ? `<div class="tags">${tags}</div>` : ""}</div>` : ""}
+    ${(prose || tags) ? `<div class="desc">${prose ? `<div class="prose">${prose}</div>` : ""}${tags ? `<div class="tags">${tags}</div>` : ""}</div>` : ""}
   </details>`;
 }
 
 function render() {
   const list = matches();
   const q = $("q").value.trim();
-  $("count").textContent = `${list.length} course${list.length === 1 ? "" : "s"}`;
+  const termLabel = termIdx.find(t => t.term === state.term)?.label || "";
+  $("count").textContent = `${list.length.toLocaleString()} course${list.length === 1 ? "" : "s"}${termLabel ? " · " + termLabel : ""}`;
   $("openTog").classList.toggle("on", $("openOnly").checked);
   $("subTog").classList.toggle("on", $("hideNonsub").checked);
   for (const sel of [$("career"), $("subject")]) {
@@ -684,12 +775,23 @@ function render() {
   const focusedSummary = document.activeElement?.matches?.("#results summary") ? cardKey(document.activeElement) : null;
   $("results").innerHTML = slice.length
     ? slice.map(c => courseHtml(c, !!q && list.length <= 5)).join("")
-    : `<div class="empty">No classes match${q ? ` “${esc(q)}”` : ""}. Try fewer words or clear the filters.</div>`;
+    : `<div class="empty"><h2>No classes match${q ? ` “${esc(q)}”` : " these filters"}</h2>
+        <p>Try fewer words, a course number like “CS 15”, or a different semester.</p>
+        <button type="button" class="btn" id="clearAll">Clear search and filters</button></div>`;
   if (focusedSummary)
     [...$("results").querySelectorAll("summary")].find(s => cardKey(s) === focusedSummary)?.focus();
   $("more").hidden = list.length <= state.shown;
   writeHash();
 }
+
+$("results").addEventListener("click", e => {
+  if (!e.target.closest("#clearAll")) return;
+  $("q").value = ""; $("career").value = ""; $("subject").value = "";
+  $("openOnly").checked = false; $("hideNonsub").checked = true;
+  state.shown = 40;
+  render();
+  $("q").focus();
+});
 
 // --- live enrollment layer: query the proxy for expanded cards ---
 async function refreshLive(cards) {
