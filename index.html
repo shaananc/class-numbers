@@ -13,61 +13,33 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
    too light for small text on light grounds, so light mode uses Ballou Blue for
    text accents and keeps Tufts Blue for large/decorative use. Flame Orange is
    darkened (#B2500E) in light mode to meet WCAG contrast. */
+/* One palette: light-dark() picks per color-scheme, which follows the OS by
+   default and is pinned by the theme switcher via [data-theme]. */
 :root {
-  color-scheme: light;
-  --bg: #F7F3EE;
-  --surface: #FFFFFF;
-  --surface2: #F2EDE7;          /* Candle White */
-  --text: #3D2E25;              /* Bessie Brown */
-  --text-dim: #6B5446;
-  --border: #E2D9CF;
-  --border-strong: #968371;
-  --brand: #3E8EDE;             /* Tufts Blue */
-  --accent: #3F5EAB;            /* Ballou Blue */
-  --accent-soft: #E4EEFA;
-  --open: #1A5532;              /* Prez Lawn Green */
-  --closed: #C0311A;            /* Alert Red */
-  --wait: #B2500E;
-  --bar-bg: #E8E1D9;
-  --shadow: 0 1px 3px rgba(61,46,37,.08);
+  color-scheme: light dark;
+  interpolate-size: allow-keywords;
+  --bg:            light-dark(#F7F3EE, #0C1626);
+  --surface:       light-dark(#FFFFFF, #132238);
+  --surface2:      light-dark(#F2EDE7, #192B45);   /* Candle White in light */
+  --text:          light-dark(#3D2E25, #F2EDE7);   /* Bessie Brown / Candle White */
+  --text-dim:      light-dark(#6B5446, #B4BFCE);
+  --border:        light-dark(#E2D9CF, #2A3E5C);
+  --border-strong: light-dark(#968371, #5C77A0);   /* 3:1 for control outlines */
+  --brand:         #3E8EDE;                        /* Tufts Blue */
+  --accent:        light-dark(#3F5EAB, #6FAAE8);   /* Ballou Blue in light */
+  --open:          light-dark(#1A5532, #98D5C7);   /* Prez Lawn Green / Aurora Green */
+  --closed:        light-dark(#C0311A, #F0705C);   /* Alert Red */
+  --wait:          light-dark(#B2500E, #FFC72C);   /* darkened Flame Orange / Beacon Yellow */
+  --bar-bg:        var(--border);
+  --accent-soft:   color-mix(in oklab, var(--accent) 14%, var(--surface));
+  --hover:         color-mix(in oklab, var(--text) 6%, var(--surface));
+  --shadow-color:  light-dark(rgb(61 46 37 / .08), rgb(0 0 0 / .4));
+  --shadow:        0 1px 3px var(--shadow-color);
+  --shadow-lg:     0 10px 30px -8px light-dark(rgb(61 46 37 / .25), rgb(0 0 0 / .6));
   --radius: 10px;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --bg: #0C1626;
-    --surface: #132238;
-    --surface2: #192B45;
-    --text: #F2EDE7;
-    --text-dim: #B4BFCE;
-    --border: #2A3E5C;
-    --border-strong: #5C77A0;
-    --accent: #6FAAE8;
-    --accent-soft: #1D3558;
-    --open: #98D5C7;            /* Aurora Green */
-    --closed: #F0705C;
-    --wait: #FFC72C;            /* Beacon Yellow */
-    --bar-bg: #2A3E5C;
-    --shadow: 0 1px 3px rgba(0,0,0,.4);
-  }
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #0C1626;
-  --surface: #132238;
-  --surface2: #192B45;
-  --text: #F2EDE7;
-  --text-dim: #B4BFCE;
-  --border: #2A3E5C;
-  --border-strong: #5C77A0;
-  --accent: #6FAAE8;
-  --accent-soft: #1D3558;
-  --open: #98D5C7;
-  --closed: #F0705C;
-  --wait: #FFC72C;
-  --bar-bg: #2A3E5C;
-  --shadow: 0 1px 3px rgba(0,0,0,.4);
-}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
@@ -136,18 +108,69 @@ select {
   padding: 0 32px 0 12px;
   max-width: 260px;
   text-overflow: ellipsis;
+  field-sizing: content; /* width follows the chosen option; JS measures where unsupported */
 }
-.select { position: relative; display: inline-flex; --chev: var(--text-dim); }
+.select {
+  position: relative; display: inline-flex;
+  --chev: var(--text-dim);
+  --chev-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
 .select:has(> select.on) { --chev: var(--accent); }
 .select::after {
   content: ""; position: absolute; right: 12px; top: 50%;
   width: 10px; height: 10px; margin-top: -5px; pointer-events: none;
   background: var(--chev);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
-          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: var(--chev-img) center / contain no-repeat;
 }
 select.on, .toggle.on {
   border-color: var(--accent); background-color: var(--accent-soft); color: var(--accent);
+}
+option .code { font-weight: 600; }
+
+/* Customizable select: style the open list itself. Browsers without
+   base-select keep the native list and everything above. */
+@supports (appearance: base-select) {
+  select, ::picker(select) { appearance: base-select; }
+  select { display: inline-flex; align-items: center; gap: 8px; padding: 0 10px 0 12px; }
+  .select::after { display: none; }
+  select::picker-icon {
+    content: ""; width: 10px; height: 10px;
+    background: var(--chev); mask: var(--chev-img) center / contain no-repeat;
+    transition: rotate .2s;
+  }
+  select:open::picker-icon { rotate: 180deg; }
+  ::picker(select) {
+    margin-block: 4px; padding: 4px;
+    min-width: anchor-size(width);
+    max-width: min(380px, 100vw - 16px);
+    max-height: min(60vh, 420px); overflow-y: auto;
+    border: 1px solid var(--border-strong); border-radius: var(--radius);
+    background: var(--surface); color: var(--text);
+    box-shadow: var(--shadow-lg);
+  }
+  option {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 6px;
+    font-size: 13.5px; cursor: pointer;
+  }
+  option:hover { background: var(--hover); }
+  option:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  option:checked { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  option::checkmark { order: 1; margin-inline-start: auto; color: var(--accent); }
+  option .code { min-width: 3.6em; flex: none; }
+  option .sep { display: none; }
+  option .name {
+    color: var(--text-dim); font-weight: 400;
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  option:checked .name { color: inherit; }
+  @media (prefers-reduced-motion: no-preference) {
+    ::picker(select) {
+      transition: opacity .15s, translate .15s, overlay .15s allow-discrete, display .15s allow-discrete;
+    }
+    select:not(:open)::picker(select) { opacity: 0; translate: 0 -4px; }
+    @starting-style { select:open::picker(select) { opacity: 0; translate: 0 -4px; } }
+  }
 }
 .seg { display: inline-flex; overflow: hidden; }
 .seg button {
@@ -156,7 +179,7 @@ select.on, .toggle.on {
 
 }
 .seg button + button { border-left: 1px solid var(--border); }
-.seg button:hover:not([aria-pressed="true"]) { background: var(--surface2); }
+.seg button:hover:not([aria-pressed="true"]) { background: var(--hover); }
 .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .seg button:focus-visible { outline-offset: -2px; }
 .seg .new {
@@ -177,6 +200,14 @@ select.on, .toggle.on {
   margin-top: 12px;
   overflow: hidden;
 }
+@media (prefers-reduced-motion: no-preference) {
+  /* interpolate-size (on :root) lets block-size animate to/from auto */
+  .card::details-content {
+    block-size: 0; overflow: clip;
+    transition: block-size .22s ease, content-visibility .22s allow-discrete;
+  }
+  .card[open]::details-content { block-size: auto; }
+}
 .card > summary {
   list-style: none;
   cursor: pointer;
@@ -194,7 +225,7 @@ select.on, .toggle.on {
   color: var(--accent);
   white-space: nowrap;
 }
-.ctitle { font-weight: 600; flex: 1 1 260px; }
+.ctitle { font-weight: 600; flex: 1 1 260px; text-wrap: balance; }
 .cmeta { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
 .secs { border-top: 1px solid var(--border); }
 .sec {
@@ -234,6 +265,7 @@ select.on, .toggle.on {
   border-top: 1px solid var(--border);
   background: var(--surface2);
   white-space: pre-line;
+  text-wrap: pretty;
 }
 .desc .tags { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
 .tag {
@@ -331,9 +363,12 @@ document.querySelector(".themes").addEventListener("click", e => {
 syncThemeButtons();
 let subjectNames = {}; // code -> full name, from data/subjects.json (optional)
 
-// A native select is as wide as its longest option; size it to the current choice instead.
+// A native select is as wide as its longest option; field-sizing: content fixes
+// that in CSS, and this measures the chosen option for browsers without it.
+const needsFit = !CSS.supports("field-sizing", "content");
 const measureCtx = document.createElement("canvas").getContext("2d");
 function fitSelect(sel) {
+  if (!needsFit) return;
   const cs = getComputedStyle(sel);
   measureCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
   const text = sel.options[sel.selectedIndex]?.text || "";
@@ -507,7 +542,9 @@ function buildFilters(data) {
   const prevSubj = $("subject").value, prevCar = $("career").value;
   const subjects = [...new Set(data.courses.map(c => c._subject))].sort();
   $("subject").innerHTML = '<option value="">All subjects</option>' +
-    subjects.map(s => `<option value="${esc(s)}">${esc(s)}${subjectNames[s] ? " · " + esc(subjectNames[s]) : ""}</option>`).join("");
+    subjects.map(s => `<option value="${esc(s)}"><span class="code">${esc(s)}</span>` +
+      (subjectNames[s] ? `<span class="sep"> · </span><span class="name">${esc(subjectNames[s])}</span>` : "") +
+      `</option>`).join("");
   // label each career code with the name SIS uses most for its sections
   const tally = {};
   for (const c of data.courses)
