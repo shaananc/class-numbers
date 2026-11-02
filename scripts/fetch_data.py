@@ -265,6 +265,22 @@ def main():
     if not index:
         print("every term failed — aborting without writing index", file=sys.stderr)
         sys.exit(1)
+
+    # subject code -> full name, for the subject dropdown; best effort, since the
+    # site falls back to bare codes if this file is missing or stale
+    subjects = {}
+    for term in terms:
+        try:
+            for s in jsonp("IScript_getSubjects", {"term": term, "career": "ALL"}):
+                code, desc = s.get("value", ""), s.get("desc", "")
+                name = desc.split(" - ", 1)[1] if " - " in desc else desc
+                if code and name:
+                    subjects[code] = name
+        except Exception as e:  # noqa: BLE001
+            print(f"[{term}] subject names unavailable: {e}", file=sys.stderr)
+    if subjects:
+        with open(os.path.join(DATA_DIR, "subjects.json"), "w") as f:
+            json.dump(dict(sorted(subjects.items())), f, separators=(",", ":"))
     with open(os.path.join(DATA_DIR, "index.json"), "w") as f:
         json.dump(index, f, separators=(",", ":"))
     print("done", flush=True)

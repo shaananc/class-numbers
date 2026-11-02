@@ -21,6 +21,7 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
   --text: #3D2E25;              /* Bessie Brown */
   --text-dim: #6B5446;
   --border: #E2D9CF;
+  --border-strong: #968371;
   --brand: #3E8EDE;             /* Tufts Blue */
   --accent: #3F5EAB;            /* Ballou Blue */
   --accent-soft: #E4EEFA;
@@ -40,6 +41,7 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
     --text: #F2EDE7;
     --text-dim: #B4BFCE;
     --border: #2A3E5C;
+    --border-strong: #5C77A0;
     --accent: #6FAAE8;
     --accent-soft: #1D3558;
     --open: #98D5C7;            /* Aurora Green */
@@ -57,6 +59,7 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
   --text: #F2EDE7;
   --text-dim: #B4BFCE;
   --border: #2A3E5C;
+  --border-strong: #5C77A0;
   --accent: #6FAAE8;
   --accent-soft: #1D3558;
   --open: #98D5C7;
@@ -89,8 +92,8 @@ header { padding: 24px 0 6px; display: flex; align-items: center; gap: 4px 12px;
 header h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
 header h1 .jumbo { color: var(--brand); }
 #updated { font-size: 12.5px; color: var(--text-dim); }
-.themes { margin-left: auto; }
-.themes button { padding: 5px 8px; display: inline-flex; align-items: center; }
+.seg.themes { margin-left: auto; height: 32px; }
+.seg.themes button { padding: 0 9px; display: inline-flex; align-items: center; }
 .themes svg { width: 16px; height: 16px; }
 
 .controls {
@@ -103,43 +106,65 @@ header h1 .jumbo { color: var(--brand); }
   flex: 1;
   font-size: 17px;
   padding: 12px 16px;
-  border: 1.5px solid var(--border);
+  border: 1.5px solid var(--border-strong);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow);
 }
 #q::placeholder { color: var(--text-dim); }
+#q:hover { border-color: var(--text-dim); }
 #q:focus { border-color: var(--accent); }
 #q:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .filters { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
-select, .toggle {
-  font-size: 13.5px;
-  padding: 7px 10px;
-  border: 1px solid var(--border);
+
+/* One shared look for every filter control: same height, border, and radius;
+   a hover state; and the accent "on" style whenever a control narrows results. */
+select, .toggle, .seg {
+  height: 36px;
+  font: inherit; font-size: 13.5px; font-weight: 500;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: var(--surface);
+  background-color: var(--surface);
   color: var(--text);
-  cursor: pointer;
+  transition: border-color .15s;
 }
-.seg {
-  display: inline-flex; border: 1px solid var(--border); border-radius: 8px;
-  overflow: hidden; background: var(--surface);
+select, .toggle { cursor: pointer; }
+select:hover, .toggle:hover, .seg:hover { border-color: var(--text-dim); }
+select {
+  appearance: none; -webkit-appearance: none;
+  padding: 0 32px 0 12px;
+  max-width: 260px;
+  text-overflow: ellipsis;
 }
+.select { position: relative; display: inline-flex; --chev: var(--text-dim); }
+.select:has(> select.on) { --chev: var(--accent); }
+.select::after {
+  content: ""; position: absolute; right: 12px; top: 50%;
+  width: 10px; height: 10px; margin-top: -5px; pointer-events: none;
+  background: var(--chev);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+select.on, .toggle.on {
+  border-color: var(--accent); background-color: var(--accent-soft); color: var(--accent);
+}
+.seg { display: inline-flex; overflow: hidden; }
 .seg button {
-  font: inherit; font-size: 13.5px; padding: 7px 12px; border: 0;
+  font: inherit; padding: 0 13px; border: 0; height: 100%;
   background: transparent; color: var(--text); cursor: pointer;
+
 }
 .seg button + button { border-left: 1px solid var(--border); }
+.seg button:hover:not([aria-pressed="true"]) { background: var(--surface2); }
 .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .seg button:focus-visible { outline-offset: -2px; }
 .seg .new {
   font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
   color: var(--accent); margin-left: 6px;
 }
-.toggle { user-select: none; display: inline-flex; align-items: center; gap: 6px; }
-.toggle input { accent-color: var(--accent); margin: 0; }
-.toggle.on { border-color: var(--accent); background: var(--accent-soft); }
+.toggle { user-select: none; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; }
+.toggle input { accent-color: var(--accent); margin: 0; width: 15px; height: 15px; }
 #count { font-size: 13px; color: var(--text-dim); margin-left: auto; }
 
 .card {
@@ -259,8 +284,8 @@ footer a { color: var(--accent); }
     </div>
     <div class="filters">
       <div id="term" class="seg" role="group" aria-label="Semester"></div>
-      <select id="career" aria-label="Career"><option value="">All careers</option></select>
-      <select id="subject" aria-label="Subject"><option value="">All subjects</option></select>
+      <span class="select"><select id="career" aria-label="School or program"><option value="">All schools</option></select></span>
+      <span class="select"><select id="subject" aria-label="Subject"><option value="">All subjects</option></select></span>
       <label class="toggle" id="openTog"><input type="checkbox" id="openOnly">Open seats</label>
       <label class="toggle" id="subTog" title="Hide independent study, thesis, internship, and similar placeholder listings"><input type="checkbox" id="hideNonsub" checked>Hide ind. study&hairsp;/&hairsp;thesis</label>
       <span id="count" role="status" aria-live="polite"></span>
@@ -302,11 +327,19 @@ document.querySelector(".themes").addEventListener("click", e => {
   syncThemeButtons();
 });
 syncThemeButtons();
-const CAREERS = {
-  ASEU: "AS&E Undergrad/Grad", GRAD: "Graduate", MEDS: "Medical",
-  DENT: "Dental", VETS: "Veterinary", NUTR: "Nutrition", FLET: "Fletcher",
-  OTPD: "Occupational Therapy", PA: "Physician Asst", PHPD: "Public Health",
-};
+let subjectNames = {}; // code -> full name, from data/subjects.json (optional)
+
+// A native select is as wide as its longest option; size it to the current choice instead.
+const measureCtx = document.createElement("canvas").getContext("2d");
+function fitSelect(sel) {
+  const cs = getComputedStyle(sel);
+  measureCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  const text = sel.options[sel.selectedIndex]?.text || "";
+  const chrome = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) +
+    parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+  sel.style.width = Math.ceil(measureCtx.measureText(text).width + chrome + 1) + "px";
+}
+document.fonts?.ready.then(() => document.querySelectorAll(".select select").forEach(fitSelect));
 
 const NONSUBST = new RegExp("\\b(" + [
   "independent stud(y|ies)", "independent research", "independent work",
@@ -343,7 +376,12 @@ $("term").addEventListener("click", e => {
 });
 
 async function loadIndex() {
-  termIdx = sortTerms(await (await fetch("data/index.json", { cache: "no-cache" })).json());
+  const [idx, names] = await Promise.all([
+    fetch("data/index.json", { cache: "no-cache" }).then(r => r.json()),
+    fetch("data/subjects.json").then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  ]);
+  termIdx = sortTerms(idx);
+  subjectNames = names;
   // default to the most recent semester, unless deep-linked
   const p0 = readHash();
   applyingHash = true; // don't let the initial render clobber the deep link
@@ -464,10 +502,22 @@ function buildFilters(data) {
   const prevSubj = $("subject").value, prevCar = $("career").value;
   const subjects = [...new Set(data.courses.map(c => c._subject))].sort();
   $("subject").innerHTML = '<option value="">All subjects</option>' +
-    subjects.map(s => `<option>${esc(s)}</option>`).join("");
-  const careers = [...new Set(data.courses.map(c => c.career))].sort();
-  $("career").innerHTML = '<option value="">All careers</option>' +
-    careers.map(c => `<option value="${esc(c)}">${esc(CAREERS[c] || c)}</option>`).join("");
+    subjects.map(s => `<option value="${esc(s)}">${esc(s)}${subjectNames[s] ? " · " + esc(subjectNames[s]) : ""}</option>`).join("");
+  // label each career code with the name SIS uses most for its sections
+  const tally = {};
+  for (const c of data.courses)
+    for (const s of c.sections) if (s.career_desc) {
+      const t = tally[c.career] ??= {};
+      t[s.career_desc] = (t[s.career_desc] || 0) + 1;
+    }
+  const careerName = code => {
+    const t = tally[code];
+    return t ? Object.entries(t).sort((a, b) => b[1] - a[1])[0][0] : code;
+  };
+  const careers = [...new Set(data.courses.map(c => c.career))]
+    .sort((a, b) => careerName(a).localeCompare(careerName(b)));
+  $("career").innerHTML = '<option value="">All schools</option>' +
+    careers.map(c => `<option value="${esc(c)}">${esc(careerName(c))}</option>`).join("");
   // keep the user's selections across term switches and background refreshes
   if (subjects.includes(prevSubj)) $("subject").value = prevSubj;
   if (careers.includes(prevCar)) $("career").value = prevCar;
@@ -583,6 +633,10 @@ function render() {
   $("count").textContent = `${list.length} course${list.length === 1 ? "" : "s"}`;
   $("openTog").classList.toggle("on", $("openOnly").checked);
   $("subTog").classList.toggle("on", $("hideNonsub").checked);
+  for (const sel of [$("career"), $("subject")]) {
+    sel.classList.toggle("on", !!sel.value);
+    fitSelect(sel);
+  }
   const slice = list.slice(0, state.shown);
   $("results").innerHTML = slice.length
     ? slice.map(c => courseHtml(c, !!q && list.length <= 5)).join("")
