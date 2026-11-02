@@ -137,17 +137,6 @@ select, .toggle {
   font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
   color: var(--accent); margin-left: 6px;
 }
-.banner {
-  display: flex; align-items: center; gap: 12px; margin: 8px 0 0;
-  padding: 8px 10px 8px 14px; font-size: 13.5px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-left: 3px solid var(--accent); border-radius: 8px;
-}
-.banner span { flex: 1; }
-.banner .bx {
-  background: none; border: 0; color: var(--text-dim); font-size: 18px;
-  line-height: 1; cursor: pointer; padding: 0 4px;
-}
 .toggle { user-select: none; display: inline-flex; align-items: center; gap: 6px; }
 .toggle input { accent-color: var(--accent); margin: 0; }
 .toggle.on { border-color: var(--accent); background: var(--accent-soft); }
@@ -261,7 +250,6 @@ footer a { color: var(--accent); }
     </div>
   </header>
   <main>
-  <div id="banner" class="banner" role="status" hidden></div>
 
   <div class="controls" role="search" aria-label="Class search">
     <div class="searchrow">
@@ -349,26 +337,9 @@ function renderTermTabs() {
     `${esc(t.label)}${isNewTerm(t) ? '<span class="sr-only">,</span><span class="new">new</span>' : ""}</button>`).join("");
 }
 
-function updateBanner() {
-  const t = [...termIdx].reverse().find(isNewTerm);
-  let dismissed = false;
-  try { dismissed = !!t && localStorage.getItem("dismissed-term-" + t.term) === "1"; } catch {}
-  if (!t || dismissed) { $("banner").hidden = true; return; }
-  $("banner").innerHTML = `<span><b>${esc(t.label)}</b> classes are now available.</span>` +
-    `<button type="button" class="bx" aria-label="Dismiss">×</button>`;
-  $("banner").dataset.term = t.term;
-  $("banner").hidden = false;
-}
-
 $("term").addEventListener("click", e => {
   const b = e.target.closest("button[data-term]");
   if (b && b.dataset.term !== (state.want || state.term)) loadTerm(b.dataset.term);
-});
-$("banner").addEventListener("click", e => {
-  if (e.target.closest(".bx")) {
-    try { localStorage.setItem("dismissed-term-" + $("banner").dataset.term, "1"); } catch {}
-    $("banner").hidden = true;
-  }
 });
 
 async function loadIndex() {
@@ -440,7 +411,6 @@ async function loadTerm(term) {
   if (term !== state.term) liveCache.clear(); // class numbers can repeat across terms
   state.term = term; state.want = null; state.data = data; state.shown = 40;
   renderTermTabs();
-  updateBanner();
   // normalize a search haystack per course
   for (const c of data.courses) {
     const instr = new Set(), attrs = new Set();
@@ -479,7 +449,6 @@ setInterval(async () => {
     if (idx.map(t => t.term).join() !== termIdx.map(t => t.term).join()) {
       termIdx = idx; // a semester was added/removed while the tab was open
       renderTermTabs();
-      updateBanner();
     }
     const cur = idx.find(t => t.term === state.term);
     if (cur && state.data && cur.generated !== state.data.generated) {
